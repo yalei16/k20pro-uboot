@@ -87,7 +87,7 @@ jobs:
         cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
         cp u-boot/u-boot.dtb release/ 2>/dev/null || true
         
-    - name: 编译安装mkbootimg工具
+    - name: 编译安装mkbootimg
       run: |
         # 从源码编译 osm0sis/mkbootimg
         git clone --depth 1 https://github.com/osm0sis/mkbootimg.git /tmp/mkbootimg-src
@@ -95,22 +95,15 @@ jobs:
         gcc -o mkbootimg mkbootimg.c -I. -lm
         gcc -o unpackbootimg unpackbootimg.c -I.
         sudo cp mkbootimg unpackbootimg /usr/local/bin/
-        cd -
+        cd $GITHUB_WORKSPACE
         
     - name: 打包为Android boot.img格式
       run: |
-        # 创建临时目录
         mkdir -p bootimg
-        
-        # 把U-Boot作为kernel放入boot.img
         cp u-boot/u-boot.bin bootimg/kernel
-        
-        # 创建空的ramdisk
         touch bootimg/ramdisk
         
-        # 打包为boot.img (header version 2, 适配Android 10+)
-        # 参数基于SM8150平台常见配置
-        mkbootimg \
+        /usr/local/bin/mkbootimg \
           --kernel bootimg/kernel \
           --ramdisk bootimg/ramdisk \
           --base 0x00000000 \
