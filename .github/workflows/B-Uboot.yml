@@ -19,7 +19,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 下载U-Boot源码
       uses: actions/checkout@v4
@@ -27,17 +27,12 @@ jobs:
         repository: u-boot/u-boot
         ref: ${{ github.event.inputs.uboot_branch }}
         path: u-boot
-        
+
     - name: 安装编译工具
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          gcc-aarch64-linux-gnu bison flex \
-          libssl-dev device-tree-compiler \
-          swig python3-dev python3-setuptools \
-          bc make git u-boot-tools \
-          libgnutls28-dev
-        
+        sudo apt-get install -y           gcc-aarch64-linux-gnu bison flex           libssl-dev device-tree-compiler           swig python3-dev python3-setuptools           bc make git u-boot-tools           libgnutls28-dev
+
     - name: 配置U-Boot
       working-directory: u-boot
       run: |
@@ -48,15 +43,15 @@ jobs:
         echo 'CONFIG_CMD_EXT4=y' >> .config
         echo 'CONFIG_FS_EXT4=y' >> .config
         make olddefconfig
-        
+
     - name: 编译U-Boot
       working-directory: u-boot
       run: make -j$(nproc)
-        
+
     - name: 生成双系统配置文件
       run: |
         mkdir -p release/extlinux
-        cat > release/extlinux/extlinux.conf << 'EOF'
+        cat > release/extlinux/extlinux.conf << 'EOFCONF'
         MENU TITLE K20 Pro Boot Menu
         TIMEOUT 50
         DEFAULT ubuntu
@@ -81,14 +76,14 @@ jobs:
           FDT /boot/dtb/sm8150-xiaomi-raphael.dtb
           INITRD /boot/initrd.img
           APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw single
-        EOF
-                
+        EOFCONF
+        
             - name: 复制编译产物
               run: |
                 cp u-boot/u-boot.bin release/ 2>/dev/null || true
                 cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
                 cp u-boot/u-boot.dtb release/ 2>/dev/null || true
-                
+        
             - name: 上传构建结果
               uses: actions/upload-artifact@v4
               with:
