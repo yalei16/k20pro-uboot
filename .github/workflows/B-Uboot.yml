@@ -51,17 +51,39 @@ jobs:
     - name: 生成双系统配置文件
       run: |
         mkdir -p release/extlinux
-        printf '%s
-        '           'MENU TITLE K20 Pro Boot Menu'           'TIMEOUT 50'           'DEFAULT ubuntu'           ''           'LABEL ubuntu'           '  MENU LABEL ^1. Ubuntu (sda31)'           '  LINUX /boot/vmlinuz'           '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb'           '  INITRD /boot/initrd.img'           '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw rootwait'           ''           'LABEL kali'           '  MENU LABEL ^2. Kali Linux (sda32)'           '  LINUX /boot/vmlinuz'           '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb'           '  INITRD /boot/initrd.img'           '  APPEND console=ttyMSM0,115200n8 root=/dev/sda32 rw rootwait'           ''           'LABEL recovery'           '  MENU LABEL ^3. Recovery Mode'           '  LINUX /boot/vmlinuz'           '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb'           '  INITRD /boot/initrd.img'           '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw single'           > release/extlinux/extlinux.conf
-    
-        - name: 复制编译产物
-          run: |
-            cp u-boot/u-boot.bin release/ 2>/dev/null || true
-            cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
-            cp u-boot/u-boot.dtb release/ 2>/dev/null || true
-    
-        - name: 上传构建结果
-          uses: actions/upload-artifact@v4
-          with:
-            name: u-boot-k20pro-dualboot
-            path: release/*
+        echo 'MENU TITLE K20 Pro Boot Menu' > release/extlinux/extlinux.conf
+        echo 'TIMEOUT 50' >> release/extlinux/extlinux.conf
+        echo 'DEFAULT ubuntu' >> release/extlinux/extlinux.conf
+        echo '' >> release/extlinux/extlinux.conf
+        echo 'LABEL ubuntu' >> release/extlinux/extlinux.conf
+        echo '  MENU LABEL ^1. Ubuntu (sda31)' >> release/extlinux/extlinux.conf
+        echo '  LINUX /boot/vmlinuz' >> release/extlinux/extlinux.conf
+        echo '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb' >> release/extlinux/extlinux.conf
+        echo '  INITRD /boot/initrd.img' >> release/extlinux/extlinux.conf
+        echo '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw rootwait' >> release/extlinux/extlinux.conf
+        echo '' >> release/extlinux/extlinux.conf
+        echo 'LABEL kali' >> release/extlinux/extlinux.conf
+        echo '  MENU LABEL ^2. Kali Linux (sda32)' >> release/extlinux/extlinux.conf
+        echo '  LINUX /boot/vmlinuz' >> release/extlinux/extlinux.conf
+        echo '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb' >> release/extlinux/extlinux.conf
+        echo '  INITRD /boot/initrd.img' >> release/extlinux/extlinux.conf
+        echo '  APPEND console=ttyMSM0,115200n8 root=/dev/sda32 rw rootwait' >> release/extlinux/extlinux.conf
+        echo '' >> release/extlinux/extlinux.conf
+        echo 'LABEL recovery' >> release/extlinux/extlinux.conf
+        echo '  MENU LABEL ^3. Recovery Mode' >> release/extlinux/extlinux.conf
+        echo '  LINUX /boot/vmlinuz' >> release/extlinux/extlinux.conf
+        echo '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb' >> release/extlinux/extlinux.conf
+        echo '  INITRD /boot/initrd.img' >> release/extlinux/extlinux.conf
+        echo '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw single' >> release/extlinux/extlinux.conf
+
+    - name: 复制编译产物
+      run: |
+        cp u-boot/u-boot.bin release/ 2>/dev/null || true
+        cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
+        cp u-boot/u-boot.dtb release/ 2>/dev/null || true
+
+    - name: 上传构建结果
+      uses: actions/upload-artifact@v4
+      with:
+        name: u-boot-k20pro-dualboot
+        path: release/*
