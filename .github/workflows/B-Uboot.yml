@@ -19,7 +19,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: 下载U-Boot源码
       uses: actions/checkout@v4
@@ -27,12 +27,17 @@ jobs:
         repository: u-boot/u-boot
         ref: ${{ github.event.inputs.uboot_branch }}
         path: u-boot
-
+        
     - name: 安装编译工具
       run: |
         sudo apt-get update
-        sudo apt-get install -y           gcc-aarch64-linux-gnu bison flex           libssl-dev device-tree-compiler           swig python3-dev python3-setuptools           bc make git u-boot-tools           libgnutls28-dev
-
+        sudo apt-get install -y \
+          gcc-aarch64-linux-gnu bison flex \
+          libssl-dev device-tree-compiler \
+          swig python3-dev python3-setuptools \
+          bc make git u-boot-tools \
+          libgnutls28-dev
+        
     - name: 配置U-Boot
       working-directory: u-boot
       run: |
@@ -43,11 +48,11 @@ jobs:
         echo 'CONFIG_CMD_EXT4=y' >> .config
         echo 'CONFIG_FS_EXT4=y' >> .config
         make olddefconfig
-
+        
     - name: 编译U-Boot
       working-directory: u-boot
       run: make -j$(nproc)
-
+        
     - name: 生成双系统配置文件
       run: |
         mkdir -p release/extlinux
@@ -75,45 +80,53 @@ jobs:
         echo '  FDT /boot/dtb/sm8150-xiaomi-raphael.dtb' >> release/extlinux/extlinux.conf
         echo '  INITRD /boot/initrd.img' >> release/extlinux/extlinux.conf
         echo '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw single' >> release/extlinux/extlinux.conf
-
+        
     - name: 复制U-Boot原始文件
       run: |
         cp u-boot/u-boot.bin release/ 2>/dev/null || true
         cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
         cp u-boot/u-boot.dtb release/ 2>/dev/null || true
-
+        
+    - name: 编译安装mkbootimg工具
+      run: |
+        # 从源码编译 osm0sis/mkbootimg
+        git clone --depth 1 https://github.com/osm0sis/mkbootimg.git /tmp/mkbootimg-src
+        cd /tmp/mkbootimg-src
+        gcc -o mkbootimg mkbootimg.c -I. -lm
+        gcc -o unpackbootimg unpackbootimg.c -I.
+        sudo cp mkbootimg unpackbootimg /usr/local/bin/
+        cd -
+        
     - name: 打包为Android boot.img格式
       run: |
-        # 下载mkbootimg工具
-        git clone --depth 1 https://github.com/osm0sis/mkbootimg.git /tmp/mkbootimg || true
-
-        # 如果克隆失败，尝试用apt安装
-        if [ ! -f /tmp/mkbootimg/mkbootimg ]; then
-          sudo apt-get install -y android-sdk-libsparse-utils 2>/dev/null || true
-        fi
-
         # 创建临时目录
         mkdir -p bootimg
-
+        
         # 把U-Boot作为kernel放入boot.img
-        # 注意：U-Boot不是Linux内核，这只是一个测试用的boot.img
-        # 实际启动可能需要edk2-msm或其他引导方式
         cp u-boot/u-boot.bin bootimg/kernel
-
+        
         # 创建空的ramdisk
         touch bootimg/ramdisk
-
+        
         # 打包为boot.img (header version 2, 适配Android 10+)
         # 参数基于SM8150平台常见配置
-        if [ -f /tmp/mkbootimg/mkbootimg ]; then
-          /tmp/mkbootimg/mkbootimg             --kernel bootimg/kernel             --ramdisk bootimg/ramdisk             --base 0x00000000             --pagesize 4096             --kernel_offset 0x00008000             --ramdisk_offset 0x01000000             --second_offset 0x00f00000             --tags_offset 0x00000100             --os_version 11.0.0             --os_patch_level 2024-01             --header_version 2             -o release/boot-u-boot.img
-        else
-          mkbootimg             --kernel bootimg/kernel             --ramdisk bootimg/ramdisk             --base 0x00000000             --pagesize 4096             --kernel_offset 0x00008000             --ramdisk_offset 0x01000000             --second_offset 0x00f00000             --tags_offset 0x00000100             --os_version 11.0.0             --os_patch_level 2024-01             --header_version 2             -o release/boot-u-boot.img
-        fi
-
+        mkbootimg \
+          --kernel bootimg/kernel \
+          --ramdisk bootimg/ramdisk \
+          --base 0x00000000 \
+          --pagesize 4096 \
+          --kernel_offset 0x00008000 \
+          --ramdisk_offset 0x01000000 \
+          --second_offset 0x00f00000 \
+          --tags_offset 0x00000100 \
+          --os_version 11.0.0 \
+          --os_patch_level 2024-01 \
+          --header_version 2 \
+          -o release/boot-u-boot.img
+        
         echo "boot.img 打包完成"
         ls -lh release/boot-u-boot.img
-
+        
     - name: 上传构建结果
       uses: actions/upload-artifact@v4
       with:
