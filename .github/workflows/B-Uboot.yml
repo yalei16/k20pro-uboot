@@ -76,11 +76,43 @@ jobs:
         echo '  INITRD /boot/initrd.img' >> release/extlinux/extlinux.conf
         echo '  APPEND console=ttyMSM0,115200n8 root=/dev/sda31 rw single' >> release/extlinux/extlinux.conf
 
-    - name: 复制编译产物
+    - name: 复制U-Boot原始文件
       run: |
         cp u-boot/u-boot.bin release/ 2>/dev/null || true
         cp u-boot/u-boot-nodtb.bin release/ 2>/dev/null || true
         cp u-boot/u-boot.dtb release/ 2>/dev/null || true
+
+    - name: 打包为Android boot.img格式
+      run: |
+        # 下载mkbootimg工具
+        git clone --depth 1 https://github.com/osm0sis/mkbootimg.git /tmp/mkbootimg || true
+
+        # 如果克隆失败，尝试用apt安装
+        if [ ! -f /tmp/mkbootimg/mkbootimg ]; then
+          sudo apt-get install -y android-sdk-libsparse-utils 2>/dev/null || true
+        fi
+
+        # 创建临时目录
+        mkdir -p bootimg
+
+        # 把U-Boot作为kernel放入boot.img
+        # 注意：U-Boot不是Linux内核，这只是一个测试用的boot.img
+        # 实际启动可能需要edk2-msm或其他引导方式
+        cp u-boot/u-boot.bin bootimg/kernel
+
+        # 创建空的ramdisk
+        touch bootimg/ramdisk
+
+        # 打包为boot.img (header version 2, 适配Android 10+)
+        # 参数基于SM8150平台常见配置
+        if [ -f /tmp/mkbootimg/mkbootimg ]; then
+          /tmp/mkbootimg/mkbootimg             --kernel bootimg/kernel             --ramdisk bootimg/ramdisk             --base 0x00000000             --pagesize 4096             --kernel_offset 0x00008000             --ramdisk_offset 0x01000000             --second_offset 0x00f00000             --tags_offset 0x00000100             --os_version 11.0.0             --os_patch_level 2024-01             --header_version 2             -o release/boot-u-boot.img
+        else
+          mkbootimg             --kernel bootimg/kernel             --ramdisk bootimg/ramdisk             --base 0x00000000             --pagesize 4096             --kernel_offset 0x00008000             --ramdisk_offset 0x01000000             --second_offset 0x00f00000             --tags_offset 0x00000100             --os_version 11.0.0             --os_patch_level 2024-01             --header_version 2             -o release/boot-u-boot.img
+        fi
+
+        echo "boot.img 打包完成"
+        ls -lh release/boot-u-boot.img
 
     - name: 上传构建结果
       uses: actions/upload-artifact@v4
